@@ -87,10 +87,71 @@ public class WhatsappRepository {
             }
         }
     }
-    public int removeUser(User user){
-        return 0;
+    public int removeUser(User user) throws Exception {
+        boolean userFound = false;
+        Group userGroup = null;
+        for(Group group : groupUserMap.keySet()){
+            List<User> list = groupUserMap.get(group);
+            if(adminMap.get(group).equals(user)){
+                throw new Exception("Cannot remove admin");
+            }
+            if(list.contains(user)){
+                userFound = true;
+                userGroup = group;
+                break;
+            }
+        }
+        if(!userFound){
+            throw new Exception("User not found" );
+        }else{
+            List<User> users = groupUserMap.get(userGroup);
+            List<User> updatedUsers = new ArrayList<>();
+            for(User u : users){
+                if(u.equals(user)){
+                    continue;
+                }
+                updatedUsers.add(u);
+            }
+            groupUserMap.put(userGroup,updatedUsers);
+            List<Message> messages = groupMessageMap.get(userGroup);
+            List<Message> updatedMessages = new ArrayList<>();
+            for(Message m : messages){
+                if(senderMap.get(m).equals(user)){
+                    continue;
+                }
+                updatedMessages.add(m);
+            }
+            groupMessageMap.put(userGroup,updatedMessages);
+            HashMap<Message,User> updatedSenderMap = new HashMap<>();
+            for(Message m : senderMap.keySet()){
+                if(senderMap.get(m).equals(user)){
+                    continue;
+                }
+                updatedSenderMap.put(m,senderMap.get(m));
+            }
+            senderMap = updatedSenderMap;
+            return updatedUsers.size()+updatedMessages.size()+updatedSenderMap.size();
+        }
     }
-    public String findMessage(Date start, Date end, int K){
-        return null;
+    public String findMessage(Date start, Date end, int K) throws Exception {
+        List<Message> messages = new ArrayList<>();
+        for(Group group: groupMessageMap.keySet()){
+            messages.addAll(groupMessageMap.get(group));
+        }
+        List<Message> filteredMessages = new ArrayList<>();
+        for(Message message: messages){
+            if(message.getTimestamp().after(start) && message.getTimestamp().before(end)){
+                filteredMessages.add(message);
+            }
+        }
+        if(filteredMessages.size() < K){
+            throw new Exception("K is greater than the number of messages");
+        }
+        Collections.sort(filteredMessages, new Comparator<Message>(){
+            public int compare(Message m1, Message m2){
+                return m2.getTimestamp().compareTo(m1.getTimestamp());
+            }
+        });
+        return filteredMessages.get(K-1).getContent();
     }
 }
